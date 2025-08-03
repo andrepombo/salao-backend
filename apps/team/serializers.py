@@ -5,7 +5,7 @@ from apps.services.serializers import ServiceSerializer
 
 class TeamSerializer(serializers.ModelSerializer):
     specialties = ServiceSerializer(many=True, read_only=True)
-    formatted_phone = serializers.CharField(source='formatted_phone', read_only=True)
+    formatted_phone = serializers.CharField(read_only=True)
     
     class Meta:
         model = Team
@@ -31,7 +31,7 @@ class TeamCreateSerializer(serializers.ModelSerializer):
 class TeamListSerializer(serializers.ModelSerializer):
     """Simplified serializer for listing team members"""
     specialties_count = serializers.SerializerMethodField()
-    formatted_phone = serializers.CharField(source='formatted_phone', read_only=True)
+    formatted_phone = serializers.CharField(read_only=True)
     
     def get_specialties_count(self, obj):
         return obj.specialties.count()
