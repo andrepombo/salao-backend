@@ -73,6 +73,46 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         
         return data
     
+    def update(self, instance, validated_data):
+        print(f'🔄 AppointmentCreateSerializer.update() called')
+        print(f'📋 Instance ID: {instance.id}')
+        print(f'📋 Validated data received: {validated_data}')
+        
+        # Extract services from validated_data since it's a many-to-many field
+        services = validated_data.pop('services', None)
+        print(f'📋 Services to update: {services}')
+        
+        # Log current services before update
+        current_services = list(instance.services.values_list('id', flat=True))
+        print(f'📋 Current services before update: {current_services}')
+        
+        # Update all other fields normally
+        for attr, value in validated_data.items():
+            print(f'📋 Setting {attr} = {value}')
+            setattr(instance, attr, value)
+        
+        # Save the instance first
+        instance.save()
+        print(f'✅ Instance saved with regular fields')
+        
+        # Update the many-to-many services field
+        if services is not None:
+            print(f'🔄 Updating services from {current_services} to {[s.id for s in services]}')
+            instance.services.set(services)
+            
+            # Recalculate total price after updating services
+            old_price = instance.total_price
+            instance.total_price = instance.calculate_total_price()
+            print(f'💰 Price updated from {old_price} to {instance.total_price}')
+            instance.save(update_fields=['total_price'])
+        
+        # Log final state
+        final_services = list(instance.services.values_list('id', flat=True))
+        print(f'✅ Final services after update: {final_services}')
+        print(f'✅ Final total price: {instance.total_price}')
+        
+        return instance
+    
     class Meta:
         model = Appointment
         fields = ['client', 'team_member', 'services', 'appointment_date', 'appointment_time', 'status', 'notes']
