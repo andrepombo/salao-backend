@@ -35,16 +35,6 @@ services:
       db:
         condition: service_healthy
 
-  # Redis for caching (optional, for future use)
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
 volumes:
   postgres_data:
   media_volume:
-  redis_data:

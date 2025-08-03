@@ -5,11 +5,12 @@ from apps.services.serializers import ServiceSerializer
 
 class TeamSerializer(serializers.ModelSerializer):
     specialties = ServiceSerializer(many=True, read_only=True)
+    formatted_phone = serializers.CharField(source='formatted_phone', read_only=True)
     
     class Meta:
         model = Team
-        fields = ['id', 'name', 'phone', 'email', 'address', 'specialties', 'hire_date', 'is_active', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'phone', 'formatted_phone', 'email', 'address', 'specialties', 'hire_date', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'formatted_phone', 'created_at', 'updated_at']
 
 
 class TeamCreateSerializer(serializers.ModelSerializer):
@@ -30,10 +31,11 @@ class TeamCreateSerializer(serializers.ModelSerializer):
 class TeamListSerializer(serializers.ModelSerializer):
     """Simplified serializer for listing team members"""
     specialties_count = serializers.SerializerMethodField()
+    formatted_phone = serializers.CharField(source='formatted_phone', read_only=True)
     
     def get_specialties_count(self, obj):
         return obj.specialties.count()
     
     class Meta:
         model = Team
-        fields = ['id', 'name', 'phone', 'email', 'is_active', 'specialties_count']
+        fields = ['id', 'name', 'phone', 'formatted_phone', 'email', 'is_active', 'specialties_count']
