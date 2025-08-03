@@ -13,8 +13,8 @@ class TeamViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return TeamCreateUpdateSerializer
-        elif self.action == 'list':
-            return TeamListSerializer
+        # Use TeamSerializer for both list and detail views to include specialties data
+        # This is needed for appointments modal to filter services by team member specialties
         return TeamSerializer
     
     def create(self, request, *args, **kwargs):
