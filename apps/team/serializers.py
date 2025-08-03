@@ -13,7 +13,7 @@ class TeamSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'formatted_phone', 'created_at', 'updated_at']
 
 
-class TeamCreateSerializer(serializers.ModelSerializer):
+class TeamCreateUpdateSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from apps.services.models import Service
@@ -26,6 +26,14 @@ class TeamCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
         fields = ['name', 'phone', 'email', 'address', 'specialties', 'hire_date', 'is_active']
+        
+    def validate_phone(self, value):
+        """Validate phone number format"""
+        if not value.isdigit() or len(value) != 11:
+            raise serializers.ValidationError(
+                "Phone number must contain exactly 11 digits."
+            )
+        return value
 
 
 class TeamListSerializer(serializers.ModelSerializer):
