@@ -20,20 +20,36 @@ services:
       retries: 3
 
   # Django Web Application
-  backend:
+  salao-backend:
     build: .
     restart: unless-stopped
     volumes:
       - .:/app
       - media_volume:/app/media
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - DEBUG=1
       - DATABASE_URL=postgresql://salao_user:salao_password123@db:5432/salao_db
     depends_on:
       db:
         condition: service_healthy
+
+  # Nginx Reverse Proxy
+  salao-nginx:
+    image: nginx:latest
+    volumes:
+      - ./staticfiles:/staticfiles
+      - ./static:/static
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    restart: always
+    ports:
+      - "8443:8443"
+      - "80:80"
+    depends_on:
+      - salao-backend
 
 volumes:
   postgres_data:
