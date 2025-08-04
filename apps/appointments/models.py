@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Sum, F
 from apps.clients.models import Client
 from apps.services.models import Service
 from apps.team.models import Team
@@ -48,16 +49,19 @@ class Appointment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def calculate_total_price(self):
-        """Calculate total price from all services"""
-        return sum(service.price for service in self.services.all())
+        """Calculate total price from all services - optimized with aggregation"""
+        result = self.services.aggregate(total=Sum('price'))['total']
+        return result or 0
     
     def calculate_total_duration(self):
-        """Calculate total duration from all services in minutes"""
-        return sum(service.duration_minutes for service in self.services.all())
+        """Calculate total duration from all services in minutes - optimized with aggregation"""
+        result = self.services.aggregate(total=Sum('duration_minutes'))['total']
+        return result or 0
     
     def get_services_list(self):
-        """Get comma-separated list of service names"""
-        return ", ".join(service.name for service in self.services.all())
+        """Get comma-separated list of service names - optimized with values_list"""
+        service_names = self.services.values_list('name', flat=True)
+        return ", ".join(service_names)
 
     def save(self, *args, **kwargs):
         # Save first, then calculate total price from services
@@ -73,3 +77,11 @@ class Appointment(models.Model):
     class Meta:
         ordering = ['appointment_date', 'appointment_time']
         unique_together = ['team_member', 'appointment_date', 'appointment_time']
+        indexes = [
+            models.Index(fields=['appointment_date']),
+            models.Index(fields=['appointment_date', 'appointment_time']),
+            models.Index(fields=['team_member', 'appointment_date']),
+            models.Index(fields=['status']),
+            models.Index(fields=['client']),
+            models.Index(fields=['created_at']),
+        ]

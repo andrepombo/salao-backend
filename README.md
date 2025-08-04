@@ -108,7 +108,6 @@ A API estará disponível em: `http://localhost:8000`
 
 ### Swagger/OpenAPI
 - **URL**: `http://localhost:8000/swagger/`
-- **Redoc**: `http://localhost:8000/redoc/`
 
 ### Endpoints Principais
 

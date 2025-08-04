@@ -125,9 +125,15 @@ class AppointmentListSerializer(serializers.ModelSerializer):
     total_duration = serializers.SerializerMethodField()
     
     def get_services_list(self, obj):
+        # Optimized: Use prefetched services to avoid additional queries
+        if hasattr(obj, '_prefetched_objects_cache') and 'services' in obj._prefetched_objects_cache:
+            return ", ".join([service.name for service in obj._prefetched_objects_cache['services']])
         return obj.get_services_list()
     
     def get_total_duration(self, obj):
+        # Optimized: Use prefetched services to avoid additional queries
+        if hasattr(obj, '_prefetched_objects_cache') and 'services' in obj._prefetched_objects_cache:
+            return sum(service.duration_minutes for service in obj._prefetched_objects_cache['services'])
         return obj.calculate_total_duration()
     
     class Meta:

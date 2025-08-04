@@ -41,3 +41,12 @@ class Client(models.Model):
 
     class Meta:
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['phone']),
+            models.Index(fields=['email']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+            models.Index(fields=['birthday']),
+            models.Index(fields=['gender']),
+        ]
