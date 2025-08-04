@@ -33,7 +33,7 @@ Uma API REST completa desenvolvida em Django para gerenciamento de salões de be
 ### 1. Clone o Repositório
 
 ```bash
-git clone <url-do-repositorio>
+git clone https://github.com/andrepombo/salao-backend.git
 cd salao-backend
 ```
 
