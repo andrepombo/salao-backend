@@ -119,4 +119,4 @@ jobs:
           sudo docker-compose logs --tail=10
           
           echo "\n🎉 Deployment health check completed!"
-          echo "Your application should be accessible at: http://ec2-3-129-43-148.us-east-2.compute.amazonaws.com"
+          echo "Your application should be accessible at: ec2-3-131-171-43.us-east-2.compute.amazonaws.com"
