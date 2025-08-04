@@ -8,6 +8,7 @@ from django.core.cache import cache
 from datetime import datetime, timedelta
 from .models import Appointment
 from .serializers import AppointmentSerializer, AppointmentCreateSerializer, AppointmentListSerializer
+from apps.services.models import Service
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -27,7 +28,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             'client', 
             'team_member'
         ).prefetch_related(
-            Prefetch('services', queryset=models.QuerySet.model.objects.only('id', 'name', 'price', 'duration_minutes'))
+            Prefetch('services', queryset=Service.objects.only('id', 'name', 'price', 'duration_minutes'))
         )
         
         # Build filters efficiently
