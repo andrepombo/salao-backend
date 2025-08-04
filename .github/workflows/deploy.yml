@@ -1,0 +1,132 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create .env file
+      env:
+        ENV: ${{ secrets.ENV }}
+        EC2_SSH_USER: ${{ secrets.EC2_SSH_USER }}
+      run: |
+        echo "ENV=${ENV}" >> .env
+        echo "DEBUG=${{ secrets.DEBUG }}" >> .env
+        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+        echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
+        echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
+        echo "TIME_ZONE=${{ secrets.TIME_ZONE }}" >> .env
+        echo "LANGUAGE_CODE=${{ secrets.LANGUAGE_CODE }}" >> .env
+        # Database settings (uncomment if using external PostgreSQL)
+        # echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+
+    - name: Install Docker and Docker Compose on EC2
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_SSH_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Check if Docker is installed
+          if ! command -v docker &> /dev/null
+          then
+            echo "Docker not found. Installing..."
+            sudo apt-get update
+            sudo apt-get install -y docker.io
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            sudo usermod -aG docker ${{ secrets.EC2_SSH_USER }}
+            echo "Docker installed successfully."
+          else
+            echo "Docker already installed. Skipping installation."
+          fi
+
+          # Check if Docker Compose is installed
+          if ! command -v docker-compose &> /dev/null
+          then
+            echo "Docker Compose not found. Installing..."
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            echo "Docker Compose installed successfully."
+          else
+            echo "Docker Compose already installed. Skipping installation."
+          fi
+
+          # Create necessary directories
+          mkdir -p /home/${{ secrets.EC2_SSH_USER }}/certbot/www
+          mkdir -p /home/${{ secrets.EC2_SSH_USER }}/certbot/conf
+          mkdir -p /home/${{ secrets.EC2_SSH_USER }}/staticfiles
+          mkdir -p /home/${{ secrets.EC2_SSH_USER }}/media
+
+    - name: Copy files to EC2
+      uses: easingthemes/ssh-deploy@main
+      with:
+        SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+        ARGS: "-rlgoDzvc -i"
+        SOURCE: "./"
+        REMOTE_HOST: ${{ secrets.EC2_HOST }}
+        REMOTE_USER: ${{ secrets.EC2_SSH_USER }}
+        TARGET: '/home/${{ secrets.EC2_SSH_USER }}/salao-backend'
+        EXCLUDE: "/dist/, /node_modules/, /.git/, /venv/, /__pycache__/, *.pyc"
+        SCRIPT_AFTER: |
+          echo "Files copied successfully"
+          echo "Cleaning up unused Docker resources..."
+          sudo docker system prune -f
+          
+          echo "Stopping existing containers..."
+          cd /home/${{ secrets.EC2_SSH_USER }}/salao-backend
+          sudo docker-compose down || true
+
+    - name: Build and start containers
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_SSH_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd /home/${{ secrets.EC2_SSH_USER }}/salao-backend
+          
+          echo "Building and starting containers..."
+          sudo docker-compose up -d --build
+          
+          echo "Waiting for services to start..."
+          sleep 30
+          
+          echo "Running Django migrations..."
+          sudo docker-compose exec -T salao-backend python manage.py migrate
+          
+          echo "Collecting static files..."
+          sudo docker-compose exec -T salao-backend python manage.py collectstatic --noinput
+          
+          echo "Checking container status..."
+          sudo docker-compose ps
+          
+          echo "Deployment completed successfully!"
+
+    - name: Health check
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_SSH_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "Performing health check..."
+          sleep 10
+          
+          # Check if nginx is responding
+          if curl -f http://localhost/admin/ > /dev/null 2>&1; then
+            echo "✅ Application is healthy and responding"
+          else
+            echo "❌ Application health check failed"
+            echo "Container logs:"
+            sudo docker-compose logs --tail=50
+            exit 1
+          fi
