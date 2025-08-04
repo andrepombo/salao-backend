@@ -28,44 +28,6 @@ jobs:
         # Database settings (uncomment if using external PostgreSQL)
         # echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
 
-    - name: Install Docker and Docker Compose on EC2
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_SSH_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          # Check if Docker is installeddd
-          if ! command -v docker &> /dev/null
-          then
-            echo "Docker not found. Installing..."
-            sudo apt-get update
-            sudo apt-get install -y docker.io
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            sudo usermod -aG docker ${{ secrets.EC2_SSH_USER }}
-            echo "Docker installed successfully."
-          else
-            echo "Docker already installed. Skipping installation."
-          fi
-
-          # Check if Docker Compose is installed
-          if ! command -v docker-compose &> /dev/null
-          then
-            echo "Docker Compose not found. Installing..."
-            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-            echo "Docker Compose installed successfully."
-          else
-            echo "Docker Compose already installed. Skipping installation."
-          fi
-
-          # Create necessary directories
-          mkdir -p /home/${{ secrets.EC2_SSH_USER }}/certbot/www
-          mkdir -p /home/${{ secrets.EC2_SSH_USER }}/certbot/conf
-          mkdir -p /home/${{ secrets.EC2_SSH_USER }}/staticfiles
-          mkdir -p /home/${{ secrets.EC2_SSH_USER }}/media
-
     - name: Copy files to EC2
       uses: easingthemes/ssh-deploy@main
       with:
@@ -77,7 +39,7 @@ jobs:
         TARGET: '/home/${{ secrets.EC2_SSH_USER }}/salao-backend'
         EXCLUDE: "/dist/, /node_modules/, /.git/, /venv/, /__pycache__/, *.pyc"
         SCRIPT_AFTER: |
-          echo "Files copied successfully"
+          echo "Files copied successfullyyyy"
           echo "Cleaning up unused Docker resources..."
           sudo docker system prune -f
           
