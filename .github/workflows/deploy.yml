@@ -39,7 +39,7 @@ jobs:
         TARGET: '/home/${{ secrets.EC2_SSH_USER }}/salao-backend'
         EXCLUDE: "/dist/, /node_modules/, /.git/, /venv/, /__pycache__/, *.pyc"
         SCRIPT_AFTER: |
-          echo "Files copied successfullyyyy"
+          echo "Files copied successfully"
           echo "Cleaning up unused Docker resources..."
           sudo docker system prune -f
           
