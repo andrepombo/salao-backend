@@ -24,7 +24,6 @@ services:
     build: .
     restart: unless-stopped
     container_name: salao-backend
-    command: venv/bin/gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3
     volumes:
       - .:/app
       - media_volume:/app/media
