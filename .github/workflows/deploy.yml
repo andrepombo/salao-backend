@@ -35,7 +35,7 @@ jobs:
         username: ${{ secrets.EC2_SSH_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          # Check if Docker is installed
+          # Check if Docker is installeddd
           if ! command -v docker &> /dev/null
           then
             echo "Docker not found. Installing..."
