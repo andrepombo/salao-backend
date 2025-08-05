@@ -151,26 +151,39 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if cached_slots is not None:
             return Response({'available_slots': cached_slots})
         
-        # Get existing appointments for the date and team member (optimized query)
-        existing_times = set(
-            Appointment.objects.filter(
-                team_member_id=team_member_id,
-                appointment_date=appointment_date,
-                status__in=['scheduled', 'confirmed', 'in_progress']
-            ).values_list('appointment_time', flat=True)
-        )
-        
-        # Pre-generate all possible slots (more efficient)
+        # Get existing appointments to calculate occupied slots including duration
+        existing_appointments = Appointment.objects.filter(
+            team_member_id=team_member_id,
+            appointment_date=appointment_date,
+            status__in=['scheduled', 'confirmed', 'in_progress']
+        ).prefetch_related('services')
+
+        occupied_slots = set()
+        for app in existing_appointments:
+            start_time = app.appointment_time
+            duration = app.calculate_total_duration()
+            if duration > 0:
+                # Combine date and time for accurate calculations
+                start_datetime = datetime.combine(appointment_date, start_time)
+                end_datetime = start_datetime + timedelta(minutes=duration)
+
+                # Add all 30-minute intervals covered by the appointment to occupied_slots
+                current_slot_time = start_datetime
+                while current_slot_time < end_datetime:
+                    occupied_slots.add(current_slot_time.time())
+                    current_slot_time += timedelta(minutes=30)
+
+        # Pre-generate all possible slots
         all_slots = [
-            f'{hour:02d}:{minute:02d}' 
-            for hour in range(9, 18) 
+            f'{hour:02d}:{minute:02d}'
+            for hour in range(7, 21)  # Hours from 07:00 to 20:xx
             for minute in [0, 30]
         ]
-        
+
         # Filter out occupied slots
         available_slots = [
-            slot for slot in all_slots 
-            if datetime.strptime(slot, '%H:%M').time() not in existing_times
+            slot for slot in all_slots
+            if datetime.strptime(slot, '%H:%M').time() not in occupied_slots
         ]
         
         # Cache for 15 minutes

@@ -41,36 +41,56 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         )
     
     def validate(self, data):
-        # Check if team member can provide all requested services
+        from datetime import datetime, timedelta
+
         team_member = data.get('team_member')
         services = data.get('services', [])
-        
+        appointment_date = data.get('appointment_date')
+        appointment_time = data.get('appointment_time')
+        instance_id = self.instance.id if self.instance else None
+
+        # 1. Check if team member can provide all requested services
         if team_member and services:
             team_specialties = set(team_member.specialties.values_list('id', flat=True))
-            requested_services = set(service.id for service in services)
-            
-            if not requested_services.issubset(team_specialties):
+            requested_services_ids = {service.id for service in services}
+            if not requested_services_ids.issubset(team_specialties):
                 raise serializers.ValidationError(
                     "O profissional selecionado não oferece todos os serviços solicitados."
                 )
-        
-        # Check for scheduling conflicts
-        appointment_date = data.get('appointment_date')
-        appointment_time = data.get('appointment_time')
-        
-        if team_member and appointment_date and appointment_time:
-            existing = Appointment.objects.filter(
+
+        # 2. Check for scheduling conflicts, considering duration
+        if team_member and appointment_date and appointment_time and services:
+            # Calculate new appointment's start and end datetimes
+            new_duration = sum(service.duration_minutes for service in services)
+            if new_duration <= 0:
+                return data # No duration, no conflict
+
+            new_start_dt = datetime.combine(appointment_date, appointment_time)
+            new_end_dt = new_start_dt + timedelta(minutes=new_duration)
+
+            # Fetch potentially conflicting appointments
+            conflicts = Appointment.objects.filter(
                 team_member=team_member,
                 appointment_date=appointment_date,
-                appointment_time=appointment_time,
                 status__in=['scheduled', 'confirmed', 'in_progress']
-            ).exclude(id=self.instance.id if self.instance else None)
-            
-            if existing.exists():
-                raise serializers.ValidationError(
-                    "Este horário já está ocupado para o profissional selecionado."
-                )
-        
+            ).exclude(id=instance_id)
+
+            for existing_app in conflicts:
+                # Calculate existing appointment's start and end datetimes
+                existing_duration = existing_app.calculate_total_duration()
+                if existing_duration <= 0:
+                    continue
+                
+                existing_start_dt = datetime.combine(existing_app.appointment_date, existing_app.appointment_time)
+                existing_end_dt = existing_start_dt + timedelta(minutes=existing_duration)
+
+                # The overlap condition: (StartA < EndB) and (EndA > StartB)
+                if new_start_dt < existing_end_dt and new_end_dt > existing_start_dt:
+                    raise serializers.ValidationError(
+                        f"Conflito de agendamento. O profissional já tem um compromisso das "
+                        f"{existing_start_dt.strftime('%H:%M')} às {existing_end_dt.strftime('%H:%M')}."
+                    )
+
         return data
     
     def update(self, instance, validated_data):
