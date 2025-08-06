@@ -93,7 +93,7 @@ jobs:
             echo "❌ Nginx is not responding"
             sudo docker-compose logs salao-nginx --tail=20
           fi
-          
+          sal
           # Test Django admin is accessible
           if curl -f -s http://localhost/admin/ > /dev/null 2>&1; then
             echo "✅ Django admin is accessible"
