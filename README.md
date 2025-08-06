@@ -7,7 +7,7 @@ Uma API REST completa desenvolvida em Django para gerenciamento de salões de be
 - **Gestão de Clientes**: CRUD completo para cadastro e gerenciamento de clientes
 - **Gestão de Equipe**: Cadastro de profissionais com especialidades
 - **Gestão de Serviços**: Catálogo de serviços com preços e durações
-- **Sistema de Agendamentos**: Agendamento completo com status e controle de workflow
+- **Sistema de Agendamentos**: Agendamento completo com status e controle de workflow, incluindo prevenção de conflitos que impede a marcação de horários quando o profissional já estiver ocupado
 - **API REST**: Endpoints completos com documentação Swagger
 - **Validação Brasileira**: Formatação e validação de telefones brasileiros
 - **CORS Configurado**: Pronto para integração com frontend

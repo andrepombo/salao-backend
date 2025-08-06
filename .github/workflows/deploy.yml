@@ -62,12 +62,6 @@ jobs:
           echo "Waiting for services to start..."
           sleep 30
           
-          echo "Running Django migrations..."
-          sudo docker-compose exec -T salao-backend python manage.py migrate
-          
-          echo "Collecting static files..."
-          sudo docker-compose exec -T salao-backend python manage.py collectstatic --noinput
-          
           echo "Checking container status..."
           sudo docker-compose ps
           
