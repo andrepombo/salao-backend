@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import models
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, Sum
 from django.utils import timezone
 from django.core.cache import cache
 from datetime import datetime, timedelta
@@ -111,7 +111,72 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         # Try to get from cache first
         cached_data = cache.get(cache_key)
         if cached_data is not None:
-            return Response(cached_data)
+            resp = Response(cached_data)
+            # Client caching: 60s, allow stale-while-revalidate
+            resp['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=60'
+            return resp
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """
+        Return dashboard stats with caching:
+        - today_appointments_count: count of appointments for today (all statuses)
+        - today_revenue: sum of total_price for today's completed appointments
+        - month_revenue: sum of total_price for current month's completed appointments
+        - previous_month_revenue: sum of total_price for previous month's completed appointments
+        """
+        today = timezone.now().date()
+        first_day_month = today.replace(day=1)
+        cache_key = f'appointments_stats_{today}'
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            resp = Response(cached)
+            resp['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=60'
+            return resp
+
+        # Today's appointments count (all statuses)
+        today_count = Appointment.objects.filter(appointment_date=today).count()
+
+        # Revenue only from completed appointments
+        today_rev = (
+            Appointment.objects
+            .filter(appointment_date=today, status='completed')
+            .aggregate(total=Sum('total_price'))['total'] or 0
+        )
+
+        month_rev = (
+            Appointment.objects
+            .filter(appointment_date__gte=first_day_month,
+                    appointment_date__lte=today,
+                    status='completed')
+            .aggregate(total=Sum('total_price'))['total'] or 0
+        )
+
+        # Previous month period
+        prev_month_last_day = first_day_month - timedelta(days=1)
+        prev_month_first_day = prev_month_last_day.replace(day=1)
+        prev_month_rev = (
+            Appointment.objects
+            .filter(appointment_date__gte=prev_month_first_day,
+                    appointment_date__lte=prev_month_last_day,
+                    status='completed')
+            .aggregate(total=Sum('total_price'))['total'] or 0
+        )
+
+        data = {
+            'today_appointments_count': today_count,
+            'today_revenue': float(today_rev),
+            'month_revenue': float(month_rev),
+            'previous_month_revenue': float(prev_month_rev),
+            'date': str(today),
+        }
+
+        # Cache for 60s
+        cache.set(cache_key, data, 60)
+        resp = Response(data)
+        resp['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=60'
+        return resp
         
         # If not in cache, query database
         appointments = self.get_queryset().filter(appointment_date=today)
@@ -119,7 +184,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         # Cache for 5 minutes
         cache.set(cache_key, serializer.data, 300)
-        return Response(serializer.data)
+        resp = Response(serializer.data)
+        resp['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=60'
+        return resp
     
     @action(detail=False, methods=['get'])
     def upcoming(self, request):
@@ -131,7 +198,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         # Try to get from cache first
         cached_data = cache.get(cache_key)
         if cached_data is not None:
-            return Response(cached_data)
+            resp = Response(cached_data)
+            resp['Cache-Control'] = 'public, max-age=120, stale-while-revalidate=60'
+            return resp
         
         # If not in cache, query database
         appointments = self.get_queryset().filter(
@@ -142,7 +211,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         # Cache for 10 minutes
         cache.set(cache_key, serializer.data, 600)
-        return Response(serializer.data)
+        resp = Response(serializer.data)
+        resp['Cache-Control'] = 'public, max-age=120, stale-while-revalidate=60'
+        return resp
     
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
@@ -262,3 +333,6 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         # In a production environment with many users, you might want a more targeted approach
         # For now, we'll just invalidate all list caches with a single key
         cache.delete('appointments_list_all')
+
+        # Invalidate stats cache (simple key per day)
+        cache.delete(f'appointments_stats_{timezone.now().date()}')
