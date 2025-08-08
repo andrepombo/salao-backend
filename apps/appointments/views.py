@@ -116,6 +116,54 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             resp['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=60'
             return resp
 
+        # Not cached: query database using optimized queryset
+        appointments = self.get_queryset().filter(appointment_date=today)
+        serializer = AppointmentListSerializer(appointments, many=True)
+
+        # Cache the serialized data for 5 minutes
+        cache.set(cache_key, serializer.data, 300)
+
+        resp = Response(serializer.data)
+        resp['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=60'
+        return resp
+
+    @action(detail=False, methods=['get'])
+    def section_stats(self, request):
+        """
+        Stats for AppointmentsSection cards with caching:
+        - total_appointments: total count of appointments
+        - today_appointments: count for today's date (all statuses)
+        - confirmed_appointments: total count with status 'confirmed'
+        - total_revenue: sum of total_price across all appointments
+        """
+        today = timezone.now().date()
+        cache_key = f'appointments_section_stats_{today}'
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            resp = Response(cached)
+            resp['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=60'
+            return resp
+
+        total_appointments = Appointment.objects.count()
+        today_appointments = Appointment.objects.filter(appointment_date=today).count()
+        confirmed_appointments = Appointment.objects.filter(status='confirmed').count()
+        total_revenue = (
+            Appointment.objects.aggregate(total=Sum('total_price'))['total'] or 0
+        )
+
+        data = {
+            'total_appointments': total_appointments,
+            'today_appointments': today_appointments,
+            'confirmed_appointments': confirmed_appointments,
+            'total_revenue': float(total_revenue),
+            'date': str(today),
+        }
+
+        cache.set(cache_key, data, 60)
+        resp = Response(data)
+        resp['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=60'
+        return resp
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """
@@ -336,3 +384,4 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
         # Invalidate stats cache (simple key per day)
         cache.delete(f'appointments_stats_{timezone.now().date()}')
+        cache.delete(f'appointments_section_stats_{timezone.now().date()}')
