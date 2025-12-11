@@ -36,16 +36,12 @@ jobs:
         SOURCE: "./"
         REMOTE_HOST: ${{ secrets.VPS_HOST }}
         REMOTE_USER: ${{ secrets.VPS_SSH_USER }}
-        TARGET: '/home/${{ secrets.VPS_SSH_USER }}/salao-backend'
+        TARGET: '/home/${{ secrets.VPS_SSH_USER }}/apps/app2/backend'
         EXCLUDE: "/dist/, /node_modules/, /.git/, /venv/, /__pycache__/, *.pyc"
         SCRIPT_AFTER: |
           echo "Files copied successfully"
           echo "Cleaning up unused Docker resources..."
           docker system prune -f
-          
-          echo "Stopping existing containers..."
-          cd /home/${{ secrets.VPS_SSH_USER }}/salao-backend
-          docker compose down || true
 
     - name: Build and start containers
       uses: appleboy/ssh-action@v0.1.10
@@ -54,16 +50,17 @@ jobs:
         username: ${{ secrets.VPS_SSH_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
-          cd /home/${{ secrets.VPS_SSH_USER }}/salao-backend
+          # Build and start only the backend service from the main app2 stack
+          cd /home/${{ secrets.VPS_SSH_USER }}/apps/app2
           
-          echo "Building and starting containers..."
-          docker compose up -d --build
+          echo "Building and starting backend container..."
+          docker compose up -d --build backend
           
           echo "Waiting for services to start..."
           sleep 30
           
-          echo "Checking container status..."
-          docker compose ps
+          echo "Checking container status for backend..."
+          docker compose ps backend
           
           echo "Deployment completed successfully!"
 
@@ -74,42 +71,24 @@ jobs:
         username: ${{ secrets.VPS_SSH_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
-          echo "Performing health check..."
+          echo "Performing backend health check via public API endpoint..."
           sleep 10
           
-          # Check if nginx is responding locally on VPS
-          echo "Testing application health..."
-          
-          # Test nginx is serving requests
-          if curl -f -s http://localhost/ > /dev/null 2>&1; then
-            echo "✅ Nginx is responding"
-          else
-            echo "❌ Nginx is not responding"
-            docker compose logs salao-nginx --tail=20
-          fi
-          # Test Django admin is accessible
-          if curl -f -s http://localhost/admin/ > /dev/null 2>&1; then
-            echo "✅ Django admin is accessible"
-          else
-            echo "⚠️  Django admin check failed (might be normal if no admin configured)"
-            docker compose logs salao-backend --tail=20
-          fi
-          
-          # Test API endpoint
-          if curl -f -s http://localhost/api/ > /dev/null 2>&1; then
+          # Test API endpoint exposed through Traefik
+          if curl -f -s https://app2.andrepombo.info/api/ > /dev/null 2>&1; then
             echo "✅ API endpoint is responding"
           else
             echo "⚠️  API endpoint check failed"
-            docker compose logs salao-backend --tail=20
+            docker compose logs backend --tail=50
           fi
           
-          # Show container status
-          echo "\nContainer status:"
-          docker compose ps
+          # Show container status for backend
+          echo "\nBackend container status:"
+          docker compose ps backend
           
-          # Show brief logs
-          echo "\nRecent logs:"
-          docker compose logs --tail=10
+          # Show brief backend logs
+          echo "\nRecent backend logs:"
+          docker compose logs backend --tail=20
           
           echo "\n🎉 Deployment health check completed!"
           echo "Your application should be accessible at: app2.andrepombo.info"
