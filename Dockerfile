@@ -29,10 +29,6 @@ RUN mkdir -p /app/staticfiles /app/media
 # Make entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
-# Create a non-root user
-RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
-USER appuser
-
 # Expose port
 EXPOSE 8000
 
