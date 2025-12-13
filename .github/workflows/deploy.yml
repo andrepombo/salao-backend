@@ -9,6 +9,9 @@ concurrency:
   group: deploy-backend
   cancel-in-progress: true
 
+env:
+  APP_BASE_URL: https://app2.andrepombo.info
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -43,8 +46,6 @@ jobs:
         EXCLUDE: "/dist/, /node_modules/, /.git/, /venv/, /__pycache__/, *.pyc"
         SCRIPT_AFTER: |
           echo "Files copied successfully"
-          echo "Cleaning up unused Docker resources..."
-          docker system prune -f
 
     - name: Build and start containers
       uses: appleboy/ssh-action@v0.1.10
@@ -79,7 +80,7 @@ jobs:
           sleep 10
           
           # Test API endpoint exposed through Traefik
-          if curl -f -s https://app2.andrepombo.info/api/ > /dev/null 2>&1; then
+          if curl -f -s ${{ env.APP_BASE_URL }}/api/ > /dev/null 2>&1; then
             echo "✅ API endpoint is responding"
           else
             echo "⚠️  API endpoint check failed"
@@ -96,4 +97,4 @@ jobs:
           docker compose logs backend --tail=20
           
           echo "\n🎉 Deployment health check completed!"
-          echo "Your application should be accessible at: app2.andrepombo.info"
+          echo "Your application should be accessible at: ${{ env.APP_BASE_URL }}"
