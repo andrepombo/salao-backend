@@ -1,18 +1,11 @@
-#!/bin/bash
+#!/bin/sh
+set -e
 
-# Create staticfiles directory if it doesn't exist and set permissions
-mkdir -p /app/staticfiles
-chmod 755 /app/staticfiles
+echo "Running database migrations..."
+python manage.py migrate --noinput
 
-# Create media directory if it doesn't exist and set permissions  
-mkdir -p /app/media
-chmod 755 /app/media
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
 
-# Run database migrations
-python manage.py migrate
-
-# Collect static files (skip if it fails due to permissions)
-python manage.py collectstatic --noinput || echo "Warning: Could not collect static files"
-
-# Start the Django development server
-python manage.py runserver 0.0.0.0:8000
+echo "Starting Django server..."
+exec "$@"

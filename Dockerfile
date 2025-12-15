@@ -32,5 +32,6 @@ RUN chmod +x /app/entrypoint.sh
 # Expose port
 EXPOSE 8000
 
-# Use bash to execute entrypoint script
-CMD ["bash", "/app/entrypoint.sh"]
+# Use entrypoint script to run setup, then start the application
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60"]
