@@ -21,18 +21,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # - name: Create .env file
-    #   env:
-    #     ENV: ${{ secrets.ENV }}
-    #   run: |
-    #     echo "ENV=${ENV}" >> .env
-    #     echo "DEBUG=${{ secrets.DEBUG }}" >> .env
+    - name: Create .env file
+      env:
+        ENV: ${{ secrets.ENV }}
+      run: |
+        echo "ENV=${ENV}" >> .env
+        echo "DEBUG=${{ secrets.DEBUG }}" >> .env
     
-    #     echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-    #     echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
-    #     echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
-    #     echo "TIME_ZONE=${{ secrets.TIME_ZONE }}" >> .env
-    #     echo "LANGUAGE_CODE=${{ secrets.LANGUAGE_CODE }}" >> .env
+        # echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+        # echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
+        # echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
+        # echo "TIME_ZONE=${{ secrets.TIME_ZONE }}" >> .env
+        # echo "LANGUAGE_CODE=${{ secrets.LANGUAGE_CODE }}" >> .env
 
     - name: Copy files to VPS
       uses: easingthemes/ssh-deploy@main
