@@ -24,15 +24,21 @@ jobs:
     - name: Create .env file
       env:
         ENV: ${{ secrets.ENV }}
+        DEBUG: ${{ secrets.DEBUG }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+        CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
+        TIME_ZONE: ${{ secrets.TIME_ZONE }}
+        LANGUAGE_CODE: ${{ secrets.LANGUAGE_CODE }}
       run: |
-        echo "ENV=${ENV}" >> .env
-        echo "DEBUG=${{ secrets.DEBUG }}" >> .env
-    
-        # echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-        # echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
-        # echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
-        # echo "TIME_ZONE=${{ secrets.TIME_ZONE }}" >> .env
-        # echo "LANGUAGE_CODE=${{ secrets.LANGUAGE_CODE }}" >> .env
+        echo "ENV=$ENV" >> .env
+        echo "DEBUG=$DEBUG" >> .env
+
+        # echo "SECRET_KEY=$SECRET_KEY" >> .env
+        # echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
+        # echo "CORS_ALLOWED_ORIGINS=$CORS_ALLOWED_ORIGINS" >> .env
+        # echo "TIME_ZONE=$TIME_ZONE" >> .env
+        # echo "LANGUAGE_CODE=$LANGUAGE_CODE" >> .env
 
     - name: Copy files to VPS
       uses: easingthemes/ssh-deploy@main
