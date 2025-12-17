@@ -15,6 +15,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-vl823c6-^gi-4n^rbiyty222^p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes', 'on')
 
+DEMO_MODE = os.getenv('DEMO_MODE', 'False').lower() in ('true', '1', 'yes', 'on')
+
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '0.0.0.0,localhost,127.0.0.1,backend,app2.andrepombo.info').split(',')
 
 # CORS settings for frontend

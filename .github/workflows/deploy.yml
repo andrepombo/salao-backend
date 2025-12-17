@@ -33,6 +33,7 @@ jobs:
       run: |
         echo "ENV=$ENV" >> .env
         echo "DEBUG=$DEBUG" >> .env
+         echo "DEMO_MODE=True" >> .env
 
         # echo "SECRET_KEY=$SECRET_KEY" >> .env
         # echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
