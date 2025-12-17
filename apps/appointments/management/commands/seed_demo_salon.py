@@ -125,23 +125,36 @@ class Command(BaseCommand):
             "no_show",
         ]
 
-        for _ in range(10):
+        # Build a pool of possible unique slots per team member and time window
+        slots = []
+        for team_member in team_members:
+            for day_offset in range(0, 6):
+                for hour_offset in [0, 1, 2, 3]:
+                    appt_date = base_date + timedelta(days=day_offset)
+                    appt_time = time(hour=base_time.hour + hour_offset, minute=0)
+                    slots.append((team_member, appt_date, appt_time))
+
+        random.shuffle(slots)
+
+        # Create up to 10 appointments in free slots
+        for team_member, appt_date, appt_time in slots[:10]:
+            # Skip if something already exists for this slot (safety when not deleting existing data)
+            if Appointment.objects.filter(
+                team_member=team_member,
+                appointment_date=appt_date,
+                appointment_time=appt_time,
+            ).exists():
+                continue
+
             client = random.choice(clients)
-            team_member = random.choice(team_members)
+            status = random.choice(statuses)
 
-            day_offset = random.randint(0, 5)
-            hour_offset = random.choice([0, 1, 2, 3])
-            appt_date = base_date + timedelta(days=day_offset)
-            appt_time = time(hour=base_time.hour + hour_offset, minute=0)
-
-            appointment, _ = Appointment.objects.get_or_create(
+            appointment = Appointment.objects.create(
                 client=client,
                 team_member=team_member,
                 appointment_date=appt_date,
                 appointment_time=appt_time,
-                defaults={
-                    "status": random.choice(statuses),
-                },
+                status=status,
             )
 
             chosen_services = random.sample(services, k=random.randint(1, min(3, len(services))))
