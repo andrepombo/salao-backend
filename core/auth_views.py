@@ -43,7 +43,7 @@ def demo_login(request):
     else:
         if cnt >= 30:
             return HttpResponse(
-                "<h1>Too Many Requests</h1><p>Please try again later.</p>",
+                "<h1>Too Many Requests</h1><p>Please try again later..</p>",
                 status=429,
             )
         try:
