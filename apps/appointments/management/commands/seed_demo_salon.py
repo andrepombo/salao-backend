@@ -29,11 +29,18 @@ class Command(BaseCommand):
             Client.objects.all().delete()
             Service.objects.all().delete()
 
-        services = self._seed_services()
-        clients = self._seed_clients()
-        team_members = self._seed_team(services)
-        self._seed_appointments(clients, team_members, services)
+        svc_created, services = self._seed_services()
+        cli_created, clients = self._seed_clients()
+        team_created, team_members = self._seed_team(services)
+        appt_created = self._seed_appointments(clients, team_members, services)
 
+        self.stdout.write("")
+        self.stdout.write(self.style.SUCCESS("Seeding summary:"))
+        self.stdout.write(f"  Services created: {svc_created} (total now: {Service.objects.count()})")
+        self.stdout.write(f"  Clients created: {cli_created} (total now: {Client.objects.count()})")
+        self.stdout.write(f"  Team members created: {team_created} (total now: {Team.objects.count()})")
+        self.stdout.write(f"  Appointments created: {appt_created} (total now: {Appointment.objects.count()})")
+        self.stdout.write("")
         self.stdout.write(self.style.SUCCESS("Demo salon data seeded successfully."))
 
     def _seed_services(self):
@@ -48,9 +55,10 @@ class Command(BaseCommand):
             ("Limpeza de pele", "pele", 60, 150.00),
         ]
 
+        created_count = 0
         created = []
         for name, service_type, duration, price in base_services:
-            obj, _ = Service.objects.get_or_create(
+            obj, was_created = Service.objects.get_or_create(
                 name=name,
                 service_type=service_type,
                 defaults={
@@ -60,8 +68,10 @@ class Command(BaseCommand):
                     "is_active": True,
                 },
             )
+            if was_created:
+                created_count += 1
             created.append(obj)
-        return created
+        return created_count, created
 
     def _seed_clients(self):
         base_clients = [
@@ -72,17 +82,20 @@ class Command(BaseCommand):
             ("Eduarda Almeida", "11999990000"),
         ]
 
+        created_count = 0
         clients = []
         for name, phone in base_clients:
-            obj, _ = Client.objects.get_or_create(
+            obj, was_created = Client.objects.get_or_create(
                 phone=phone,
                 defaults={
                     "name": name,
                     "email": f"{name.split()[0].lower()}@example.com",
                 },
             )
+            if was_created:
+                created_count += 1
             clients.append(obj)
-        return clients
+        return created_count, clients
 
     def _seed_team(self, services):
         base_team = [
@@ -92,9 +105,10 @@ class Command(BaseCommand):
         ]
 
         today = date.today()
+        created_count = 0
         team_members = []
         for index, (name, phone) in enumerate(base_team):
-            obj, _ = Team.objects.get_or_create(
+            obj, was_created = Team.objects.get_or_create(
                 phone=phone,
                 defaults={
                     "name": name,
@@ -106,12 +120,14 @@ class Command(BaseCommand):
             if services:
                 specialties = random.sample(services, k=min(3, len(services)))
                 obj.specialties.set(specialties)
+            if was_created:
+                created_count += 1
             team_members.append(obj)
-        return team_members
+        return created_count, team_members
 
     def _seed_appointments(self, clients, team_members, services):
         if not clients or not team_members or not services:
-            return
+            return 0
 
         base_date = date.today() + timedelta(days=1)
         base_time = time(hour=10, minute=0)
@@ -137,6 +153,7 @@ class Command(BaseCommand):
         random.shuffle(slots)
 
         # Create up to 10 appointments in free slots
+        created_count = 0
         for team_member, appt_date, appt_time in slots[:10]:
             # Skip if something already exists for this slot (safety when not deleting existing data)
             if Appointment.objects.filter(
@@ -161,3 +178,6 @@ class Command(BaseCommand):
             appointment.services.set(chosen_services)
             appointment.total_price = appointment.calculate_total_price()
             appointment.save(update_fields=["total_price"])
+            created_count += 1
+
+        return created_count
