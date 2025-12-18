@@ -143,34 +143,42 @@ class Command(BaseCommand):
             "no_show",
         ]
 
-        # Build a pool of possible unique slots per team member and time window
-        slots = []
+        # Build pools: ensure at least 5 on today; prefer future times today, fallback to past times if needed
+        today = date.today()
         now_time = datetime.now().time()
+        today_future_slots = []
+        today_past_slots = []
+        other_slots = []
         for team_member in team_members:
             for day_offset in range(0, 6):
                 for hour_offset in [0, 1, 2, 3]:
                     appt_date = base_date + timedelta(days=day_offset)
                     appt_time = time(hour=base_time.hour + hour_offset, minute=0)
-                    if appt_date == date.today() and appt_time <= now_time:
-                        continue
-                    slots.append((team_member, appt_date, appt_time))
+                    if appt_date == today:
+                        if appt_time > now_time:
+                            today_future_slots.append((team_member, appt_date, appt_time))
+                        else:
+                            today_past_slots.append((team_member, appt_date, appt_time))
+                    else:
+                        other_slots.append((team_member, appt_date, appt_time))
 
-        random.shuffle(slots)
+        random.shuffle(today_future_slots)
+        random.shuffle(today_past_slots)
+        random.shuffle(other_slots)
 
-        # Create up to 10 appointments in free slots
-        created_count = 0
-        for team_member, appt_date, appt_time in slots[:15]:
-            # Skip if something already exists for this slot (safety when not deleting existing data)
+        # Assemble candidate list ensuring at least 5 from today
+        NEED_TODAY = 5
+        TOTAL_NEEDED = 15
+
+        def try_create(team_member, appt_date, appt_time):
             if Appointment.objects.filter(
                 team_member=team_member,
                 appointment_date=appt_date,
                 appointment_time=appt_time,
             ).exists():
-                continue
-
+                return False
             client = random.choice(clients)
             status = random.choice(statuses)
-
             appointment = Appointment.objects.create(
                 client=client,
                 team_member=team_member,
@@ -178,11 +186,8 @@ class Command(BaseCommand):
                 appointment_time=appt_time,
                 status=status,
             )
-
-            # Ensure appointment services are a subset of the professional's specialties
             specialties_qs = team_member.specialties.all()
             specialties = list(specialties_qs)
-            # Safety: if for any reason specialties are empty, fall back to all services
             source_pool = specialties if len(specialties) > 0 else services
             k_max = min(3, len(source_pool))
             k = random.randint(1, k_max) if k_max > 0 else 0
@@ -190,6 +195,22 @@ class Command(BaseCommand):
             appointment.services.set(chosen_services)
             appointment.total_price = appointment.calculate_total_price()
             appointment.save(update_fields=["total_price"])
-            created_count += 1
+            return True
+
+        # Create up to 15 appointments in free slots, prioritizing at least 5 today
+        created_count = 0
+        todays_created = 0
+        for team_member, appt_date, appt_time in today_future_slots + today_past_slots:
+            if try_create(team_member, appt_date, appt_time):
+                created_count += 1
+                todays_created += 1
+                if todays_created >= NEED_TODAY or created_count >= TOTAL_NEEDED:
+                    break
+        if created_count < TOTAL_NEEDED:
+            for team_member, appt_date, appt_time in today_future_slots + today_past_slots + other_slots:
+                if created_count >= TOTAL_NEEDED:
+                    break
+                if try_create(team_member, appt_date, appt_time):
+                    created_count += 1
 
         return created_count
