@@ -1,5 +1,5 @@
 import random
-from datetime import date, timedelta, time
+from datetime import date, timedelta, time, datetime
 
 from django.core.management.base import BaseCommand
 
@@ -131,7 +131,7 @@ class Command(BaseCommand):
         if not clients or not team_members or not services:
             return 0
 
-        base_date = date.today() + timedelta(days=1)
+        base_date = date.today()
         base_time = time(hour=10, minute=0)
 
         statuses = [
@@ -145,18 +145,21 @@ class Command(BaseCommand):
 
         # Build a pool of possible unique slots per team member and time window
         slots = []
+        now_time = datetime.now().time()
         for team_member in team_members:
             for day_offset in range(0, 6):
                 for hour_offset in [0, 1, 2, 3]:
                     appt_date = base_date + timedelta(days=day_offset)
                     appt_time = time(hour=base_time.hour + hour_offset, minute=0)
+                    if appt_date == date.today() and appt_time <= now_time:
+                        continue
                     slots.append((team_member, appt_date, appt_time))
 
         random.shuffle(slots)
 
         # Create up to 10 appointments in free slots
         created_count = 0
-        for team_member, appt_date, appt_time in slots[:10]:
+        for team_member, appt_date, appt_time in slots[:15]:
             # Skip if something already exists for this slot (safety when not deleting existing data)
             if Appointment.objects.filter(
                 team_member=team_member,
