@@ -23,7 +23,8 @@ class Appointment(models.Model):
     )
     team_member = models.ForeignKey(
         Team,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='appointments'
     )
     services = models.ManyToManyField(
@@ -72,7 +73,8 @@ class Appointment(models.Model):
 
     def __str__(self):
         services_str = self.get_services_list() or "No services"
-        return f"{self.client.name} - {self.team_member.name} - {services_str} - {self.appointment_date} {self.appointment_time}"
+        team_name = self.team_member.name if self.team_member else ""
+        return f"{self.client.name} - {team_name} - {services_str} - {self.appointment_date} {self.appointment_time}"
 
     class Meta:
         ordering = ['appointment_date', 'appointment_time']
