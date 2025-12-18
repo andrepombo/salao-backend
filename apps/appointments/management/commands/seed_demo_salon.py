@@ -118,8 +118,10 @@ class Command(BaseCommand):
                 },
             )
             if services:
-                specialties = random.sample(services, k=min(3, len(services)))
-                obj.specialties.set(specialties)
+                # Preserve existing specialties on reseed to avoid breaking existing appointments
+                if was_created or obj.specialties.count() == 0:
+                    specialties = random.sample(services, k=min(3, len(services)))
+                    obj.specialties.set(specialties)
             if was_created:
                 created_count += 1
             team_members.append(obj)
@@ -174,7 +176,14 @@ class Command(BaseCommand):
                 status=status,
             )
 
-            chosen_services = random.sample(services, k=random.randint(1, min(3, len(services))))
+            # Ensure appointment services are a subset of the professional's specialties
+            specialties_qs = team_member.specialties.all()
+            specialties = list(specialties_qs)
+            # Safety: if for any reason specialties are empty, fall back to all services
+            source_pool = specialties if len(specialties) > 0 else services
+            k_max = min(3, len(source_pool))
+            k = random.randint(1, k_max) if k_max > 0 else 0
+            chosen_services = random.sample(source_pool, k=k) if k > 0 else []
             appointment.services.set(chosen_services)
             appointment.total_price = appointment.calculate_total_price()
             appointment.save(update_fields=["total_price"])
