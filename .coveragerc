@@ -1,0 +1,10 @@
+[run]
+source = apps
+omit =
+    */migrations/*
+    */tests.py
+    */tests_*.py
+    */management/commands/*
+
+[report]
+show_missing = True
