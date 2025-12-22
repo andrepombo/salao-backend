@@ -2,11 +2,9 @@ import pytest
 
 # Create your tests here.
 
-from .models import Service
-
 @pytest.mark.django_db
-def test_create_simple_service():
-    service = Service.objects.create(
+def test_create_simple_service(service_factory):
+    service = service_factory(
         name="Corte básico",
         service_type="cabelo",
         description="Corte simples de cabelo",
@@ -22,8 +20,8 @@ def test_create_simple_service():
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("service_type", ["cabelo", "unhas", "barba"]) 
-def test_create_service_with_various_types(service_type):
-    service = Service.objects.create(
+def test_create_service_with_various_types(service_factory, service_type):
+    service = service_factory(
         name=f"Serviço {service_type}",
         service_type=service_type,
         duration_minutes=15,
