@@ -149,4 +149,5 @@ REST_FRAMEWORK = {
     # Pagination removed as per user request
 }
 
+SWAGGER_USE_COMPAT_RENDERERS = False
 

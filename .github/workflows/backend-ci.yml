@@ -29,3 +29,7 @@ jobs:
       - name: Django system checks
         run: |
           python manage.py check
+
+      - name: Pytest test suite
+        run: |
+          pytest
