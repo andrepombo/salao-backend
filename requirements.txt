@@ -17,3 +17,4 @@ gunicorn
 whitenoise
 pytest
 pytest-django
+pytest-cov
