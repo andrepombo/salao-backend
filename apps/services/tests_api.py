@@ -1,17 +1,15 @@
 import pytest
-from rest_framework.test import APIClient
 
 from .models import Service
 
 
 @pytest.mark.django_db
-def test_list_services_returns_active_only():
-    Service.objects.create(name="Ativo 1", service_type="cabelo", duration_minutes=30, price="50.00", is_active=True)
-    Service.objects.create(name="Inativo", service_type="unhas", duration_minutes=20, price="30.00", is_active=False)
-    Service.objects.create(name="Ativo 2", service_type="barba", duration_minutes=15, price="25.00", is_active=True)
+def test_list_services_returns_active_only(api_client, service_factory):
+    service_factory(name="Ativo 1", service_type="cabelo", duration_minutes=30, price="50.00", is_active=True)
+    service_factory(name="Inativo", service_type="unhas", duration_minutes=20, price="30.00", is_active=False)
+    service_factory(name="Ativo 2", service_type="barba", duration_minutes=15, price="25.00", is_active=True)
 
-    client = APIClient()
-    resp = client.get("/api/services/")
+    resp = api_client.get("/api/services/")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -20,9 +18,8 @@ def test_list_services_returns_active_only():
 
 
 @pytest.mark.django_db
-def test_services_types_endpoint_lists_choices():
-    client = APIClient()
-    resp = client.get("/api/services/types/")
+def test_services_types_endpoint_lists_choices(api_client):
+    resp = api_client.get("/api/services/types/")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -32,14 +29,50 @@ def test_services_types_endpoint_lists_choices():
 
 
 @pytest.mark.django_db
-def test_services_by_type_filters_correctly():
-    Service.objects.create(name="Corte", service_type="cabelo", duration_minutes=30, price="50.00")
-    Service.objects.create(name="Manicure", service_type="unhas", duration_minutes=40, price="60.00")
+def test_services_by_type_filters_correctly(api_client, service_factory):
+    service_factory(name="Corte", service_type="cabelo", duration_minutes=30, price="50.00")
+    service_factory(name="Manicure", service_type="unhas", duration_minutes=40, price="60.00")
 
-    client = APIClient()
-    resp = client.get("/api/services/by_type/", {"type": "cabelo"})
+    resp = api_client.get("/api/services/by_type/", {"type": "cabelo"})
 
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 1
     assert data[0]["service_type"] == "cabelo"
+
+
+@pytest.mark.django_db
+def test_create_service_returns_full_data(api_client):
+    payload = {
+        "name": "Corte premium",
+        "service_type": "cabelo",
+        "description": "Corte especial",
+        "duration_minutes": 45,
+        "price": "120.00",
+        "is_active": True,
+    }
+
+    resp = api_client.post("/api/services/", data=payload, format="json")
+
+    assert resp.status_code == 201, resp.content
+    data = resp.json()
+    assert data["name"] == payload["name"]
+    assert data["service_type"] == payload["service_type"]
+    assert data["duration_minutes"] == payload["duration_minutes"]
+    assert data["price"] == payload["price"]
+
+
+@pytest.mark.django_db
+def test_update_service_returns_updated_data(api_client, service_factory):
+    service = service_factory(name="Corte simples", price="50.00")
+
+    resp = api_client.patch(
+        f"/api/services/{service.id}/",
+        data={"name": "Corte atualizado", "price": "80.00"},
+        format="json",
+    )
+
+    assert resp.status_code == 200, resp.content
+    data = resp.json()
+    assert data["name"] == "Corte atualizado"
+    assert data["price"] == "80.00"
