@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_yasg',
+    'django_prometheus',
     'apps.clients',
     'apps.services',
     'apps.team',
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.gzip.GZipMiddleware',  # Add GZip compression
@@ -53,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'

@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('demo-login/', demo_login, name='demo_login'),
+    path('', include('django_prometheus.urls')),
     
     # Swagger/OpenAPI Documentation
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
